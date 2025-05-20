@@ -1,0 +1,27 @@
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdisallowedtags
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDisallowedTags
+      validation:
+        openAPIV3Schema:
+          properties:
+            disallowedTags:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdisallowedtags
+
+        violation[{"msg": msg}] {
+          container := input.review.object.spec.containers[_]
+          tag := split(container.image, ":")[1]
+          tag == input.parameters.disallowedTags[_]
+          msg := sprintf("Using disallowed image tag: %v", [tag])
+        }
